@@ -28,9 +28,9 @@ def setup():
 
 
 def check_result(orig_data, result):
-    if not isinstance(result, tf.RaggedTensor):
+    if not isinstance(result, (tf.RaggedTensor, torch.Tensor)):
         assert len(result) == len(orig_data)
-    else:
+    elif not isinstance(result, torch.Tensor):
         assert result.shape[0] == len(orig_data)
     assert_allclose(result[10][1], orig_data[10][1] ** 4)
 
@@ -104,19 +104,29 @@ def tf_bench(device, n_trials: int = 1):
 
 
 @memory.cache
-def torch_bench(device):
+def torch_bench(device, n_trials=1):
     """
-    Using torch nested tensors for sqrt. Type/format
+    Using torch nested tensors for prod. Type/format
     conversions are included in the timing.
     """
-    ragged_data = setup()
-    start = time.perf_counter()
-    with torch.device(device):
-        ragged_data = torch.nested.nested_tensor(ragged_data.tolist())
-        ragged_data = torch.sqrt(ragged_data)
-    end = time.perf_counter()
-    total_sec = end - start
-    return [total_sec], ragged_data
+    total_sec_l = []
+    granular_sec_l = []
+    for trial in range(n_trials):
+        ragged_data = setup()
+        start = time.perf_counter()
+        with torch.device(device):
+            ragged_data = torch.nested.nested_tensor(ragged_data.tolist())
+            granular_start = time.perf_counter()
+            result = ragged_data * ragged_data * ragged_data * ragged_data
+            # crude guard against lazy eval:
+            print(result[10][1])
+            granular_sec = time.perf_counter() - granular_start
+            granular_sec_l.append(granular_sec)
+        end = time.perf_counter()
+        total_sec = end - start
+        total_sec_l.append(total_sec)
+    print(type(result))
+    return total_sec_l, granular_sec_l, result
 
 
 @memory.cache
@@ -193,8 +203,8 @@ def main_bench():
     bench_results["PyTaco"], bench_results["PyTaco\ngranular"], result = pytaco_bench(n_trials=3)
     check_result(orig_data, result)
     # NOTE: torch nested_tensor does not support sqrt op at this time
-    #bench_results["torch_nested_cpu"], result = torch_bench(device="cpu")
-    #check_result(orig_data, result)
+    bench_results["Torch Nested CPU"], bench_results["Torch Nested CPU\ngranular"], result = torch_bench(device="cpu", n_trials=3)
+    check_result(orig_data, result)
     #bench_results["torch_nested_gpu"], result = torch_bench(device="mps")
     #check_result(orig_data, result)
     plot_results(bench_results)
