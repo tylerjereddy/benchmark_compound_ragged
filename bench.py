@@ -205,8 +205,8 @@ def main_bench():
     # NOTE: torch nested_tensor does not support sqrt op at this time
     bench_results["Torch Nested CPU"], bench_results["Torch Nested CPU\ngranular"], result = torch_bench(device="cpu", n_trials=3)
     check_result(orig_data, result)
-    #bench_results["torch_nested_gpu"], result = torch_bench(device="mps")
-    #check_result(orig_data, result)
+    bench_results["Torch Nested GPU"], bench_results["Torch Nested GPU\ngranular"], result = torch_bench(device="cuda", n_trials=3)
+    check_result(orig_data, result)
     plot_results(bench_results)
 
 
