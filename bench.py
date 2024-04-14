@@ -78,7 +78,7 @@ def awkward_bench(n_trials: int = 1):
 @memory.cache
 def tf_bench(device, n_trials: int = 1):
     """
-    Using tensorflow Ragged tensors for sqrt. Type/format
+    Using tensorflow Ragged tensors for product op. Type/format
     conversions are included in the timing.
     """
     total_sec_l = []
@@ -89,18 +89,18 @@ def tf_bench(device, n_trials: int = 1):
         with tf.device(device):
             ragged_data = tf.ragged.constant(ragged_data)
             granular_start = time.perf_counter()
-            ragged_data = tf.math.sqrt(ragged_data)
+            result = ragged_data * ragged_data * ragged_data * ragged_data
             # crude attempt to avoid potential lazy
             # eval issues (is that actual problem with tf?)
             # I didn't want to go as far as trying to force
             # eager evaluation globally though
-            print(ragged_data[10][1])
+            print(result[10][1])
             granular_sec = time.perf_counter() - granular_start
             granular_sec_l.append(granular_sec)
         end = time.perf_counter()
         total_sec = end - start
         total_sec_l.append(total_sec)
-    return total_sec_l, granular_sec_l, ragged_data
+    return total_sec_l, granular_sec_l, result
 
 
 @memory.cache
@@ -186,10 +186,10 @@ def main_bench():
     #check_result(orig_data, result)
     bench_results["Awkward Array"], bench_results["Awkward Array\ngranular"], result = awkward_bench(n_trials=3)
     check_result(orig_data, result)
-    #bench_results["Tensorflow Ragged GPU"], bench_results["Tensorflow Ragged GPU\ngranular"], result = tf_bench(device="/device:GPU:0", n_trials=3)
-    #check_result(orig_data, result)
-    #bench_results["Tensorflow Ragged CPU"], bench_results["Tensorflow Ragged CPU\ngranular"], result = tf_bench(device="/device:CPU:0", n_trials=3)
-    #check_result(orig_data, result)
+    bench_results["Tensorflow Ragged GPU"], bench_results["Tensorflow Ragged GPU\ngranular"], result = tf_bench(device="/device:GPU:0", n_trials=3)
+    check_result(orig_data, result)
+    bench_results["Tensorflow Ragged CPU"], bench_results["Tensorflow Ragged CPU\ngranular"], result = tf_bench(device="/device:CPU:0", n_trials=3)
+    check_result(orig_data, result)
     bench_results["PyTaco"], bench_results["PyTaco\ngranular"], result = pytaco_bench(n_trials=3)
     check_result(orig_data, result)
     # NOTE: torch nested_tensor does not support sqrt op at this time
